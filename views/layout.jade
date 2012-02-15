@@ -2,5 +2,8 @@
 html
   head
     title= title
+    link(rel='stylesheet', href='/OpenLayers/theme/default/style.css')
     link(rel='stylesheet', href='/stylesheets/style.css')
-  body!= body
+    script(type='text/javascript', src='/OpenLayers/OpenLayers.js')
+    script(type='text/javascript', src='/javascripts/geonotes.js')
+  body(onload='init()')!= body
