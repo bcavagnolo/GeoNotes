@@ -18,6 +18,8 @@ case "$1" in
   start)
         echo -n "Starting daemon: "$NAME
         start-stop-daemon --quiet --start -b -d $DAEMON_DIR -m --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_OPTS
+		kill -0 `cat $PIDFILE`
+		[ $? != 0 ] && exit 1
         echo "."
         ;;
   stop)
