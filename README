@@ -14,3 +14,58 @@ basic use cases:
 
 3. GeoNotes uploaded by one user should appear or otherwise be available on
    other users' active web clients
+
+Running GeoNotes
+================
+
+For development, you probably want to run GeoNotes on your localhost.  Here's
+how I set that up on my Ubuntu machine:
+
+1. Install node from source.  We're using 0.6.8 at this time:
+
+   $ wget http://nodejs.org/dist/node-v0.6.8.tar.gz
+   $ tar xzf node-v0.6.8.tar.gz
+   $ cd node-v0.6.8/
+   $ ./configure --prefix=/usr/local
+   $ make
+   $ sudo make install
+
+2. Get the code and install the dependencies:
+
+   $ git clone git://github.com/bcavagnolo/GeoNotes.git
+   $ cd GeoNotes
+   $ npm install
+
+3. Launch the app:
+
+   $ node ./app.js
+
+Automated Deploy
+================
+
+I use and Ubuntu server on the Internet to stage GeoNotes.  Let's call this
+machine staging.com in these instructions.
+
+1. Login to staging.com and set up node from source as described above
+
+2. Set up the hudson build server.  I just happen to run mine on the same
+   Ubuntu server, but you could run it anywhere.  I'll leave it to you to
+   figure out how to set up hudson and create a job for GeoNotes.  For your
+   reference, here are the commands that I have the hudson server running:
+
+   $ rm -rf /data/apps/GeoNotes
+   $ cp -r ${WORKSPACE} /data/apps/GeoNotes
+   $ cd /data/apps/GeoNotes && npm install
+   $ RUNDIR=/data/apps/run/GeoNotes BUILD_ID=dontKillMe /data/apps/GeoNotes/scripts/GeoNotes.sh restart
+
+   Note that I had to set the system git configuration so hudson could tag the
+   tree:
+
+   $ sudo git config --system user.email "hudson@localhost"
+   $ sudo git config --system user.name "Hudson"
+
+   Thanks to:
+   http://translate.google.fr/translate?hl=fr&sl=ja&tl=en&u=http%3A%2F%2Fd.hatena.ne.jp%2Fkompiro%2F20090613%2F1244873030
+   ...for this tip.
+
+3. Expect the app at staging.com:3000
