@@ -7,10 +7,10 @@ cd `dirname $0`/..
 DAEMON_DIR=$PWD
 
 NAME=GeoNotes
-PIDFILE=/tmp/$NAME.pid
-DAEMON=/usr/local/bin/node
+[ "${RUNDIR}" = "" ] && export RUNDIR="/tmp"
+PIDFILE=${RUNDIR}/$NAME.pid
+DAEMON=${DAEMON_DIR}/scripts/run-node.sh
 DAEMON_OPTS=./app.js
-
 
 export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 
