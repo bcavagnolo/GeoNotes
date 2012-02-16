@@ -1,0 +1,16 @@
+Introduction
+============
+
+GeoNotes is a simple application that I am developing to learn about web-based
+GIS.  This is its primary purpose, so don't expect anything impressively
+innovative here.  Its other purposes are to store, retrieve, and share
+geo-referenced digital information in a user-friendly fashion.  Here are the
+basic use cases:
+
+1. Upload an arbitrary text note with associated location (a GeoNote) from a
+   web client to a database from a map-based interface
+
+2. View and retrieve stored GeoNotes from a web client in a map-based interface
+
+3. GeoNotes uploaded by one user should appear or otherwise be available on
+   other users' active web clients
