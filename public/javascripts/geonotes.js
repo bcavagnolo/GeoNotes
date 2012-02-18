@@ -1,10 +1,14 @@
 var map;
 var notes; // layer for geonote markers
 
-// These are some one-time initializations for the markers that we use
+// These are some one-time initializations for the GeoNotes
 var size = new OpenLayers.Size(21,25);
 var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
 var icon = new OpenLayers.Icon('http://www.openlayers.org/dev/img/marker.png', size, offset);
+var formatter = new OpenLayers.Format.GeoJSON();
+
+// This is the state for the broadcast management
+var socket;
 
 function GeoNote(lonlat) {
   this.lat = lonlat.lat;
@@ -20,6 +24,11 @@ function GeoNote(lonlat) {
   this.marker = new OpenLayers.Marker(new OpenLayers.LonLat(lonlat.lon, lonlat.lat),icon.clone());
   notes.addMarker(this.marker);
   this.marker.events.register("click", this, this.clickHandler);
+
+  point = new OpenLayers.Geometry.Point(this.lon, this.lat);
+  console.log(formatter);
+  gjson = formatter.write(point);
+  socket.emit('new geonote', gjson);
 }
 
 OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
@@ -75,9 +84,8 @@ $(document).ready(function() {
   map.addControl(click);
   click.activate();
 
-  var socket = io.connect();
+  socket = io.connect();
   socket.on('news', function (data) {
     console.log(data);
-    socket.emit('my other event', { my: 'data' });
   });
 });
