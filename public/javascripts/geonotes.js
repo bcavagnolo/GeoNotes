@@ -74,12 +74,19 @@ $(document).ready(function() {
   map.addLayers([osm]);
 
   map.addControl(new OpenLayers.Control.LayerSwitcher());
-  map.zoomToMaxExtent();
+
+
+  // For some reason, possibly due to the size of the map div, we see aliased
+  // copies of the world map.  Here we work around that by setting the extent.
+  var proj = new OpenLayers.Projection("EPSG:4326");
+  var bounds = new OpenLayers.Bounds(-180, -59, 180, 72)
+  bounds.transform(proj, map.getProjectionObject());
+  map.zoomToExtent(bounds);
 
   notes = new OpenLayers.Layer.Markers("GeoNotes");
   map.addLayer(notes);
 
-  console.log("OSM Extent: " + osm.getExtent());
+  console.log("OSM Extent: " + osm.getExtent().transform(map.getProjectionObject(), proj));
 
   var click = new OpenLayers.Control.Click();
   map.addControl(click);
