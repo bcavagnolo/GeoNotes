@@ -37,10 +37,14 @@ console.log("Express server listening on port %d in %s mode", app.address().port
 
 // GeoNote handling
 var io = socketio.listen(app);
+var clients = {};
+var notes = [];
 
 io.sockets.on('connection', function (socket) {
-  socket.emit('news', { hello: 'world' });
-  socket.on('new geonote', function (data) {
-    console.log(data);
+
+  socket.on('new geonote', function (note) {
+	// Expect a GeoJSON point
+    socket.broadcast.emit('new geonote', note);
+    console.log(note);
   });
 });

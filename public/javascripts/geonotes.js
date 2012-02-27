@@ -25,10 +25,11 @@ function GeoNote(lonlat) {
   notes.addMarker(this.marker);
   this.marker.events.register("click", this, this.clickHandler);
 
-  point = new OpenLayers.Geometry.Point(this.lon, this.lat);
-  console.log(formatter);
-  gjson = formatter.write(point);
-  socket.emit('new geonote', gjson);
+  this.announce = function() {
+    point = new OpenLayers.Geometry.Point(this.lon, this.lat);
+    gjson = formatter.write(point);
+    socket.emit('new geonote', gjson);
+  }
 }
 
 OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
@@ -56,7 +57,7 @@ OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
 
   trigger: function(e) {
     var lonlat = map.getLonLatFromViewPortPx(e.xy);
-    new GeoNote(lonlat);
+    (new GeoNote(lonlat)).announce();
   }
 });
 
@@ -85,7 +86,8 @@ $(document).ready(function() {
   click.activate();
 
   socket = io.connect();
-  socket.on('news', function (data) {
-    console.log(data);
+  socket.on('new geonote', function (data) {
+    console.log("Received:" + data);
   });
+
 });
