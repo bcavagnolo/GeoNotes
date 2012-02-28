@@ -122,7 +122,8 @@ $(document).ready(function() {
 
   socket = io.connect();
   socket.on('new geonote', function (data) {
-    console.log("Received:" + data);
+    console.log(data);
+    notes.addFeatures(formatter.read(data));
   });
 
 });

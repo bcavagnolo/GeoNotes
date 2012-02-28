@@ -41,10 +41,15 @@ var clients = {};
 var notes = [];
 
 io.sockets.on('connection', function (socket) {
+  for (var i = 0; i < notes.length; i++) {
+    console.log("SENDING:" + notes[i]);
+	socket.emit('new geonote', notes[i]);
+  }
 
   socket.on('new geonote', function (note) {
 	// Expect a GeoJSON point
     socket.broadcast.emit('new geonote', note);
+	notes.push(note);
     console.log(note);
   });
 });
