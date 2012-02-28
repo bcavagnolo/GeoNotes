@@ -6,6 +6,7 @@ var size = new OpenLayers.Size(21,25);
 var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
 var icon = new OpenLayers.Icon('http://www.openlayers.org/dev/img/marker.png', size, offset);
 var formatter = new OpenLayers.Format.GeoJSON();
+var selectControl;
 
 // This is the state for the broadcast management
 var socket;
@@ -24,9 +25,24 @@ GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
   },
 
   clickHandler: function (e) {
-    console.log(this.lat);
-    console.log(this.lon);
-    alert("You clicked a geonote at " + this.lat + " " + this.lon);
+    this.popup = new OpenLayers.Popup.FramedCloud(
+      this.id, 
+      this.geometry.getBounds().getCenterLonLat(),
+      null,
+      "<div style='font-size:.8em'>Feature: " + this.id +"<br>Area: " + this.geometry.getArea()+"</div>",
+      null, true, this.onPopupClose);
+    map.addPopup(this.popup);
+    this.popup.data = this;
+  },
+
+  onPopupClose: function (e) {
+    selectControl.unselect(this.data);
+  },
+
+  unClickHandler: function (e) {
+    map.removePopup(this.popup);
+    this.popup.destroy();
+    this.popup = null;
   },
 
   announce: function() {
@@ -113,17 +129,16 @@ $(document).ready(function() {
   notes.events.on({
     "featureselected": function(e) {
       e.feature.clickHandler();
-      console.log("selected note " + e.feature.id);
     },
     "featureunselected": function(e) {
-      console.log("unselected note " + e.feature.id);
+      e.feature.unClickHandler();
     },
   });
 
   socket = io.connect();
   socket.on('new geonote', function (data) {
-    console.log(data);
-    notes.addFeatures(formatter.read(data));
+    p = formatter.read(data, "Geometry");
+    new GeoNote(new OpenLayers.LonLat(p.x, p.y));
   });
 
 });
