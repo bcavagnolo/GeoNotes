@@ -10,27 +10,31 @@ var formatter = new OpenLayers.Format.GeoJSON();
 // This is the state for the broadcast management
 var socket;
 
-function GeoNote(lonlat) {
-  this.lat = lonlat.lat;
-  this.lon = lonlat.lon;
+// A GeoNote is just a decorated vector feature
+GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
 
-  this.clickHandler = function (e) {
+  initialize: function(lonlat) {
+    this.lat = lonlat.lat;
+    this.lon = lonlat.lon;
+    OpenLayers.Feature.Vector.prototype.initialize.apply(
+      this,
+      [new OpenLayers.Geometry.Point(this.lon, this.lat), null, null]
+    );
+    notes.addFeatures(this);
+  },
+
+  clickHandler: function (e) {
     console.log(this.lat);
     console.log(this.lon);
-    alert("You clicked marker at " + this.lat + " " + this.lon);
-  }
+    alert("You clicked a geonote at " + this.lat + " " + this.lon);
+  },
 
-  // Put up a marker on the map
-  this.marker = new OpenLayers.Marker(new OpenLayers.LonLat(lonlat.lon, lonlat.lat),icon.clone());
-  notes.addMarker(this.marker);
-  this.marker.events.register("click", this, this.clickHandler);
-
-  this.announce = function() {
+  announce: function() {
     point = new OpenLayers.Geometry.Point(this.lon, this.lat);
     gjson = formatter.write(point);
     socket.emit('new geonote', gjson);
   }
-}
+});
 
 OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
   defaultHandlerOptions: {
@@ -83,14 +87,38 @@ $(document).ready(function() {
   bounds.transform(proj, map.getProjectionObject());
   map.zoomToExtent(bounds);
 
-  notes = new OpenLayers.Layer.Markers("GeoNotes");
+  notes = new OpenLayers.Layer.Vector("GeoNotes");
   map.addLayer(notes);
 
   console.log("OSM Extent: " + osm.getExtent().transform(map.getProjectionObject(), proj));
 
+  // Activate the map click handler first.  This gives it the lowest precedence
+  // to handle clicks.
   var click = new OpenLayers.Control.Click();
   map.addControl(click);
   click.activate();
+
+  // Add control to select notes
+  selectControl = new OpenLayers.Control.SelectFeature(
+    [notes],
+    {
+      clickout: true, toggle: false,
+      multiple: false, hover: false,
+    }
+  );
+
+  map.addControl(selectControl);
+  selectControl.activate();
+
+  notes.events.on({
+    "featureselected": function(e) {
+      e.feature.clickHandler();
+      console.log("selected note " + e.feature.id);
+    },
+    "featureunselected": function(e) {
+      console.log("unselected note " + e.feature.id);
+    },
+  });
 
   socket = io.connect();
   socket.on('new geonote', function (data) {
