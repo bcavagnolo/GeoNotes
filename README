@@ -21,27 +21,20 @@ Running GeoNotes
 For development, you probably want to run GeoNotes on your localhost.  Here's
 how I set that up on my Ubuntu machine:
 
-1. Install node from source.  We're using 0.6.8 at this time:
-
-   $ wget http://nodejs.org/dist/node-v0.6.8.tar.gz
-   $ tar xzf node-v0.6.8.tar.gz
-   $ cd node-v0.6.8/
-   $ ./configure --prefix=/usr/local
-   $ make
-   $ sudo make install
+1. [more to come.  Migrating to python]
 
 2. Get the code and install the dependencies:
 
    $ git clone git://github.com/bcavagnolo/GeoNotes.git
    $ cd GeoNotes
-   $ npm install
+   [ more to come ]
 
 3. Launch the app:
 
-   $ node ./app.js
+   [ more to come ]
 
-Automated Deploy
-================
+Automated Staging Deploy
+========================
 
 I use and Ubuntu server on the Internet to stage GeoNotes.  Let's call this
 machine staging.com in these instructions.
@@ -53,10 +46,7 @@ machine staging.com in these instructions.
    figure out how to set up hudson and create a job for GeoNotes.  For your
    reference, here are the commands that I have the hudson server running:
 
-   $ rm -rf /data/apps/GeoNotes
-   $ cp -r ${WORKSPACE} /data/apps/GeoNotes
-   $ cd /data/apps/GeoNotes && npm install
-   $ RUNDIR=/data/apps/run/GeoNotes BUILD_ID=dontKillMe /data/apps/GeoNotes/scripts/GeoNotes.sh restart
+   [ more to come ]
 
    Note that I had to set the system git configuration so hudson could tag the
    tree:
@@ -69,3 +59,8 @@ machine staging.com in these instructions.
    ...for this tip.
 
 3. Expect the app at staging.com:3000
+
+Production Deploy
+=================
+
+[ more to come ]
