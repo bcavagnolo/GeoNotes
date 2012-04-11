@@ -53,11 +53,11 @@ Ubuntu
 
 3. Configure GeoNotes:
 
-   This is achieved by copying src/config.sample.py to src/config.py and editing it.
+   This is achieved by copying config.sample.py to config.py and editing it.
 
 4. Sync the database:
 
-   $ python src/manage.py syncdb
+   $ python manage.py syncdb
      [when prompted, create super user named 'admin']
 
 Automated Staging Deploy
@@ -101,3 +101,5 @@ Here's how I originally started this project:
    $ django-admin.py startproject src
    $ cd src/
    $ python manage.py startapp GeoNotes
+   $ cd ..
+   $ mv src/* ./
