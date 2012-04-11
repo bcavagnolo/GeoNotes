@@ -19,19 +19,46 @@ Running GeoNotes
 ================
 
 For development, you probably want to run GeoNotes on your localhost.  Here's
-how I set that up on my Ubuntu machine:
+how:
 
-1. [more to come.  Migrating to python]
+Ubuntu
+------
 
-2. Get the code and install the dependencies:
+0. Get the source:
 
    $ git clone git://github.com/bcavagnolo/GeoNotes.git
    $ cd GeoNotes
-   [ more to come ]
 
-3. Launch the app:
+1. Install dependencies [These instructions need to be validated]
 
-   [ more to come ]
+   $ sudo apt-get install python-pip postgresql postgis
+
+   Fix postgis' broken UTF8 support (If you're using 1.3 or earlier) by
+   applying the following patch:
+
+   $ wget -O - https://code.djangoproject.com/raw-attachment/ticket/16778/postgis-adapter-2.patch \
+     | patch -d /usr/local/lib/python2.7/dist-packages/ -p 0
+
+   $ pip install -r requirements.txt
+
+2. Prepare database
+
+   $ wget https://docs.djangoproject.com/en/dev/_downloads/create_template_postgis-debian.sh
+   $ sudo su postgres
+   $ bash ./create_template_postgis-debian.sh
+   [ This last step may fail if you already have created the postgis template ]
+   $ createuser -P -D -S -R geonotes
+   $ createdb -T template_postgis -O geonotes geonotes
+   $ exit
+
+3. Configure GeoNotes:
+
+   This is achieved by copying src/config.sample.py to src/config.py and editing it.
+
+4. Sync the database:
+
+   $ python src/manage.py syncdb
+     [when prompted, create super user named 'admin']
 
 Automated Staging Deploy
 ========================
@@ -64,3 +91,13 @@ Production Deploy
 =================
 
 [ more to come ]
+
+Other Notes
+===========
+
+Here's how I originally started this project:
+
+   $ cd /path/to/GeoNotes
+   $ django-admin.py startproject src
+   $ cd src/
+   $ python manage.py startapp GeoNotes
