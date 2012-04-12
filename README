@@ -60,6 +60,10 @@ Ubuntu
    $ python manage.py syncdb
      [when prompted, create super user named 'admin']
 
+5. Run the server:
+
+   $ python manage.py runserver
+
 Automated Staging Deploy
 ========================
 

@@ -135,10 +135,10 @@ $(document).ready(function() {
     },
   });
 
-  socket = io.connect();
-  socket.on('new geonote', function (data) {
-    p = formatter.read(data, "Geometry");
-    new GeoNote(new OpenLayers.LonLat(p.x, p.y));
-  });
+  // socket = io.connect();
+  // socket.on('new geonote', function (data) {
+  //   p = formatter.read(data, "Geometry");
+  //   new GeoNote(new OpenLayers.LonLat(p.x, p.y));
+  // });
 
 });

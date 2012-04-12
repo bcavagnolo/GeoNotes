@@ -2,11 +2,12 @@
 import sys
 try:
     import config
-except:
+except Exception as e:
     print """
-    Failed to import config.  Please create config.py.
+    Failed to import config.  Please create or fix config.py.
     See config.sample.py for details.
     """
+    print e
     sys.exit(1)
 
 DEBUG = True
@@ -81,6 +82,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
+    config.DEPLOY_SETTINGS.content_root + "/static",
 )
 
 # List of finder classes that know how to find static files in
@@ -109,12 +111,10 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = 'src.urls'
+ROOT_URLCONF = 'urls'
 
 TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
+    config.DEPLOY_SETTINGS.content_root + "/templates/"
 )
 
 INSTALLED_APPS = (

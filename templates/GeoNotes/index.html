@@ -1,0 +1,16 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+	<title>GeoNotes</title>
+	<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}OpenLayers/theme/default/style.css" />
+	<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}stylesheets/style.css" />
+	<script type="text/javascript" src={{ STATIC_URL }}OpenLayers/OpenLayers.js></script>
+	<script type="text/javascript" src={{ STATIC_URL }}jquery/jquery-1.7.1.min.js></script>
+	<script type="text/javascript" src={{ STATIC_URL }}javascripts/geonotes.js></script>
+  </head>
+  <body>
+	<h1>GeoNotes</h1>
+	<p>Zoom, pan, and click to add a GeoNote</p>
+	<div id="map" class="largemap"></div>
+  </body>
+</html>
