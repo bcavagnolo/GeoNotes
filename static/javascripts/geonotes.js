@@ -84,17 +84,22 @@ UCStates = {
   LOGGING_IN:1,
   LOGGED_IN:2,
   AUTHENTICATING:3,
+  REGISTRATION_INPUT:4,
+  REGISTERING:5,
 }
 
 UCState = UCStates.LOGGED_OUT;
 var authTimer = null;
+var regTimer = null;
 
 function uc_set_logged_in() {
   $('#uc_login').hide();
   $('#uc_logged_in').show();
   $('#uc_logged_out').hide();
   $("#uc_login_status").text("");
+  $('#uc_registration').hide();
   if (authTimer) clearTimeout(authTimer);
+  if (regTimer) clearTimeout(regTimer);
 }
 
 function uc_set_logged_out() {
@@ -102,7 +107,9 @@ function uc_set_logged_out() {
   $('#uc_logged_in').hide();
   $('#uc_logged_out').show();
   $("#uc_login_status").text("")
+  $('#uc_registration').hide();
   if (authTimer) clearTimeout(authTimer);
+  if (regTimer) clearTimeout(regTimer);
 }
 
 function uc(e) {
@@ -116,6 +123,9 @@ function uc(e) {
     } else if (e["event"] == "login") {
       $('#uc_login').show();
       UCState = UCStates.LOGGING_IN;
+    } else if (e["event"] == "register") {
+      $('#uc_registration').show();
+      UCState = UCStates.REGISTRATION_INPUT;
     }
     break;
 
@@ -138,6 +148,28 @@ function uc(e) {
       $("#uc_login_status").text("ERROR: Timed out while authenticating.")
       UCState = UCStates.LOGGING_IN;
     } else if (e["event"] == "login_cancel") {
+      uc_set_logged_out();
+      UCState = UCStates.LOGGED_OUT;
+    }
+    break;
+
+  case UCStates.REGISTRATION_INPUT:
+    if (e["event"] == "reg_submit") {
+      // TODO: another dummy
+      $("#uc_reg_status").text("Registering...")
+      regTimer = setTimeout(function() {uc({"event":"reg_timeout"})}, 3000);
+      UCState = UCStates.REGISTERING;
+    } else if (e["event"] == "reg_cancel") {
+      uc_set_logged_out();
+      UCState = UCStates.LOGGED_OUT;
+    }
+    break;
+
+  case UCStates.REGISTERING:
+    if (e["event"] == "reg_timeout") {
+      $("#uc_reg_status").text("ERROR: Timed out while registering.")
+      UCState = UCStates.REGISTRATION_INPUT;
+    } else if (e["event"] == "reg_cancel") {
       uc_set_logged_out();
       UCState = UCStates.LOGGED_OUT;
     }

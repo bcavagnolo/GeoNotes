@@ -142,7 +142,7 @@ body {
     -webkit-text-size-adjust: none;
 }
 
-#uc_login_form {
+.uc form {
     z-index:1000;
     position:absolute;
     top:100px;

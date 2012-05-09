@@ -32,6 +32,22 @@
 		  <a id="login_cancel" href="#" class="uc">Cancel</a>
 		</form>
 	  </div>
+	  <div id="uc_registration" style="display: none">
+		<form id="uc_reg_form">
+		  <fieldset>
+			<legend>Enter registration info</legend>
+			<div><span id="uc_reg_status"/>&nbsp;</div>
+			<label for="id_username">Username: </label>
+			<input id="username" name="username" size="25" class="required username"/>
+			<label for="id_password1">Password: </label>
+			<input id="password1" name="password" type="password" size="25" class="required password1"/>
+			<label for="id_password2">Password: </label>
+			<input id="password2" name="password" type="password" size="25" class="required password2"/>
+		  </fieldset>
+		  <a id="reg_submit" href="#" class="uc">Submit</a>
+		  <a id="reg_cancel" href="#" class="uc">Cancel</a>
+		</form>
+	  </div>
 	</div>
 	<p>Zoom, pan, and click to add a GeoNote</p>
 	<div id="map" class="largemap"></div>
