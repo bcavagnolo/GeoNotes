@@ -142,3 +142,13 @@ body {
     -webkit-text-size-adjust: none;
 }
 
+#uc_login_form {
+    z-index:1000;
+    position:absolute;
+    top:100px;
+    left:100px;
+    width:20%;
+    background:#FFFFFF;
+    border: 1px solid #ccc;
+    padding: 4px;
+}

@@ -10,6 +10,29 @@
   </head>
   <body>
 	<h1>GeoNotes</h1>
+	<div id="user_control" class="uc">
+	  <div id="uc_logged_out">
+		<a id="login" href="#" class="uc">Login</a>
+		<a id="register" href="#" class="uc">Register</a>
+	  </div>
+	  <div id="uc_logged_in" style="display: none">
+		<a id="logout" href="#" class="uc">Logout</a>
+	  </div>
+	  <div id="uc_login" style="display: none">
+		<form id="uc_login_form">
+		  <fieldset>
+			<legend>Enter credentials</legend>
+			<div><span id="uc_login_status"/>&nbsp;</div>
+			<label for="id_username">Username: </label>
+			<input id="username" name="username" size="25" class="required username"/>
+			<label for="id_password">Password: </label>
+			<input id="password" name="password" type="password" size="25" class="required password"/>
+		  </fieldset>
+		  <a id="login_submit" href="#" class="uc">Submit</a>
+		  <a id="login_cancel" href="#" class="uc">Cancel</a>
+		</form>
+	  </div>
+	</div>
 	<p>Zoom, pan, and click to add a GeoNote</p>
 	<div id="map" class="largemap"></div>
   </body>
