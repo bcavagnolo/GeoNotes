@@ -1,10 +1,14 @@
 from django.conf.urls.defaults import patterns, include, url
+from views import *
 
 # Uncomment the next two lines to enable the admin:
 # from django.contrib import admin
 # admin.autodiscover()
 
 urlpatterns = patterns('',
+    url(r'^users[/]*$', UsersView.as_view()),
+    url(r'^users/(?P<username>[^/]+)[/]*$', UserView.as_view(), name='user'),
+
     # Examples:
     # url(r'^$', 'GeoNotes.views.home', name='home'),
     # url(r'^GeoNotes/', include('GeoNotes.foo.urls')),
