@@ -35,21 +35,51 @@ class UsersView(View):
 
 class UserView(View):
     """
-    A view that allows authenticated users to GET their profile.
+    A view that allows authenticated users to GET or DELETE their profile.
     """
-    def get(self, request, username=None):
+
+    def _check_perm(self, request, username):
         # get a user profile.  Here we enforce a bit of permission by only
-        # allowing users to view their own profiles.  There is probably a
-        # better way to do this by embracing either the contrib.auth or
-        # djangorestframework permission systems.  But our immediate need is
-        # for the client to have some non-destructive way of verifying that the
-        # username and password are correct.
+        # allowing users to operate on their own profiles.  There is probably a
+        # better way to do this by embracing the contrib.auth and/or
+        # djangorestframework permission systems.  Note that we return 403
+        # instead of 404 if the user doesn't exist.  This is common practice to
+        # prevent malicious users from knowing whether or not a particular
+        # username exists.
         auth = authentication.BasicAuthentication(self)
         u = auth.authenticate(request)
         if u == None or u.username != username:
             raise ErrorResponse(status.HTTP_403_FORBIDDEN, None, {})
-        response = Response(200)
-        return self.render(response)
+        return u
 
-    # TODO: This class needs a put routine that updates a users' profile
-    # information
+    def get(self, request, username=None):
+        """
+        GETting geonotes/users/foo/ just verifies that the credentials are
+        valid.  No state is stored on the server side.
+        """
+        u = self._check_perm(request, username)
+        return Response(status.HTTP_200_OK)
+
+    def delete(self, request, username=None):
+        """
+        DELETEing geonotes/users/foo/ deletes a users.  At this time, the other
+        resources that get deleted are unspecified.
+        """
+        u = self._check_perm(request, username)
+        u.delete()
+        return
+
+    def put(self, request, username=None):
+        # TODO: At this time, we only support password updates.  But we should
+        # just update any key/value pairs that the user sends.  Hmm.
+        u = self._check_perm(request, username)
+        try:
+            password = self.DATA['password']
+            if password == "":
+                raise KeyError
+            u.set_password(password)
+            u.save()
+        except KeyError:
+            return Response(status.HTTP_400_BAD_REQUEST,
+                            "password is required")
+        return
