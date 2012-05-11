@@ -38,12 +38,20 @@
 		  <fieldset>
 			<legend>Enter registration info</legend>
 			<div><span id="uc_reg_status"/>&nbsp;</div>
-			<label for="id_username">Username: </label>
-			<input id="username" name="username" size="25" class="required username"/>
-			<label for="id_password1">Password: </label>
-			<input id="password1" name="password" type="password" size="25" class="required password1"/>
-			<label for="id_password2">Password: </label>
-			<input id="password2" name="password" type="password" size="25" class="required password2"/>
+			<ul>
+			  <li>
+				<label for="id_username">Username: </label>
+				<input id="username" name="username" size="25" class="required username"/>
+			  </li>
+			  <li>
+				<label for="id_password1">Password: </label>
+				<input id="password1" name="password1" type="password" size="25" class="required password1"/>
+			  </li>
+			  <li>
+				<label for="id_password2">Password (again): </label>
+				<input id="password2" name="password2" type="password" size="25" class="required password2"/>
+			  </li>
+			</ul>
 		  </fieldset>
 		  <a id="reg_submit" href="#" class="uc">Submit</a>
 		  <a id="reg_cancel" href="#" class="uc">Cancel</a>

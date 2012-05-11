@@ -94,7 +94,7 @@ UCStates = {
 
 UCState = UCStates.LOGGED_OUT;
 var authReq = null;
-var regTimer = null;
+var regReq = null;
 var username = null;
 var password = null;
 var auth = null;
@@ -104,14 +104,20 @@ var auth_msg = {
   "":"Error: Failed to contact server",
 };
 
+var reg_msg = {
+  "BAD REQUEST":"That username appears to be unavailable.",
+  "":"Error: Failed to contact server",
+};
+
 function uc_set_logged_in() {
   $('#uc_login').hide();
   $('#uc_logged_in').show();
   $('#uc_logged_out').hide();
   $("#uc_login_status").text("");
   $('#uc_registration').hide();
+  $("#uc_reg_status").text("");
   if (authReq) authReq.abort();
-  if (regTimer) clearTimeout(regTimer);
+  if (regReq) regReq.abort();
 }
 
 function uc_set_logged_out() {
@@ -119,9 +125,10 @@ function uc_set_logged_out() {
   $('#uc_logged_in').hide();
   $('#uc_logged_out').show();
   $("#uc_login_status").text("")
+  $("#uc_reg_status").text("");
   $('#uc_registration').hide();
   if (authReq) authReq.abort();
-  if (regTimer) clearTimeout(regTimer);
+  if (regReq) regReq.abort();
 }
 
 function uc(e) {
@@ -187,10 +194,32 @@ function uc(e) {
 
   case UCStates.REGISTRATION_INPUT:
     if (e["event"] == "reg_submit") {
-      // TODO: another dummy
-      $("#uc_reg_status").text("Registering...")
-      regTimer = setTimeout(function() {uc({"event":"reg_timeout"})}, 3000);
+
+      //Again: jquery (or other) validation tool could be used here
+      username = $("#uc_reg_form input[name=username]").val();
+      password1 = $("#uc_reg_form input[name=password1]").val();
+      password2 = $("#uc_reg_form input[name=password2]").val();
+      if (username == "" || password1 == "" || password2 == "") {
+        $("#uc_reg_status").text("ERROR: All fields are required");
+        return;
+      }
+      if (password1 != password2) {
+        $("#uc_reg_status").text("ERROR: Passwords do not match");
+        return;
+      }
+      password = password1;
+      $("#uc_reg_status").text("Registering...");
+      regReq = $.ajax({
+        url: baseURL + '/users/',
+        type: 'POST',
+        data: {username: username, password: password},
+        success: function() {uc({event: "reg_success"});},
+        error: function(xhr, status, error) {
+          uc({event: "reg_fail", error: error});
+        }
+      });
       UCState = UCStates.REGISTERING;
+
     } else if (e["event"] == "reg_cancel") {
       uc_set_logged_out();
       UCState = UCStates.LOGGED_OUT;
@@ -198,12 +227,15 @@ function uc(e) {
     break;
 
   case UCStates.REGISTERING:
-    if (e["event"] == "reg_timeout") {
-      $("#uc_reg_status").text("ERROR: Timed out while registering.")
+    if (e["event"] == "reg_fail") {
+      $("#uc_reg_status").text(reg_msg[e['error']]);
       UCState = UCStates.REGISTRATION_INPUT;
     } else if (e["event"] == "reg_cancel") {
       uc_set_logged_out();
       UCState = UCStates.LOGGED_OUT;
+    } else if (e["event"] == "reg_success") {
+      uc_set_logged_in();
+      UCState = UCStates.LOGGED_IN;
     }
     break;
 
