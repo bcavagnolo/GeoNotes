@@ -6,6 +6,7 @@
 	<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}stylesheets/style.css" />
 	<script type="text/javascript" src={{ STATIC_URL }}OpenLayers/OpenLayers.js></script>
 	<script type="text/javascript" src={{ STATIC_URL }}jquery/jquery-1.7.1.min.js></script>
+	<script type="text/javascript" src={{ STATIC_URL }}jquery-base64/jquery.base64.js></script>
 	<script type="text/javascript" src={{ STATIC_URL }}javascripts/geonotes.js></script>
   </head>
   <body>
@@ -22,7 +23,7 @@
 		<form id="uc_login_form">
 		  <fieldset>
 			<legend>Enter credentials</legend>
-			<div><span id="uc_login_status"/>&nbsp;</div>
+			<div id="uc_login_status">&nbsp;</div>
 			<label for="id_username">Username: </label>
 			<input id="username" name="username" size="25" class="required username"/>
 			<label for="id_password">Password: </label>

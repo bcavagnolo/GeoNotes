@@ -8,6 +8,10 @@ var icon = new OpenLayers.Icon('http://www.openlayers.org/dev/img/marker.png', s
 var formatter = new OpenLayers.Format.GeoJSON();
 var selectControl;
 
+// Calculate the URL of web service
+var l = window.location;
+var baseURL = l.protocol + "//" + l.host + "/" + l.pathname.split('/')[1] + "geonotes";
+
 // A GeoNote is just a decorated vector feature
 GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
 
@@ -89,8 +93,16 @@ UCStates = {
 }
 
 UCState = UCStates.LOGGED_OUT;
-var authTimer = null;
+var authReq = null;
 var regTimer = null;
+var username = null;
+var password = null;
+var auth = null;
+
+var auth_msg = {
+  FORBIDDEN:"Error: incorrect credentials",
+  "":"Error: Failed to contact server",
+};
 
 function uc_set_logged_in() {
   $('#uc_login').hide();
@@ -98,7 +110,7 @@ function uc_set_logged_in() {
   $('#uc_logged_out').hide();
   $("#uc_login_status").text("");
   $('#uc_registration').hide();
-  if (authTimer) clearTimeout(authTimer);
+  if (authReq) authReq.abort();
   if (regTimer) clearTimeout(regTimer);
 }
 
@@ -108,7 +120,7 @@ function uc_set_logged_out() {
   $('#uc_logged_out').show();
   $("#uc_login_status").text("")
   $('#uc_registration').hide();
-  if (authTimer) clearTimeout(authTimer);
+  if (authReq) authReq.abort();
   if (regTimer) clearTimeout(regTimer);
 }
 
@@ -131,11 +143,28 @@ function uc(e) {
 
   case UCStates.LOGGING_IN:
     if (e["event"] == "login_submit") {
-      // TODO: Here we have a dummy function used to test the authentication
-      // UI.  Ultimately, it will perform a network authentication and either
-      // succeed, fail, or timeout.
-      $("#uc_login_status").text("Authenticating...")
-      authTimer = setTimeout(function() {uc({"event":"auth_timeout"})}, 3000);
+      //jquery has a validation plugin that could probably help us out here,
+      //but you have to turn over the entire form to it.  So we reinvent that
+      //wheel here.
+      username = $("#uc_login_form input[name=username]").val();
+      password = $("#uc_login_form input[name=password]").val();
+      auth = "Basic " + $.base64.encode(username + ":" + password);
+      if (username == "" || password == "") {
+        $("#uc_login_status").text("ERROR: Username and Password are required");
+        return;
+      }
+      $("#uc_login_status").text("Authenticating...");
+      authReq = $.ajax({
+        url: baseURL + '/users/' + username + '/',
+        type: 'GET',
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("Authorization", auth);
+        },
+        success: function() {uc({event: "auth_success"});},
+        error: function(xhr, status, error) {
+          uc({event: "auth_fail", error: error});
+        }
+      });
       UCState = UCStates.AUTHENTICATING;
     } else if (e["event"] == "login_cancel") {
       uc_set_logged_out();
@@ -144,12 +173,15 @@ function uc(e) {
     break;
 
   case UCStates.AUTHENTICATING:
-    if (e["event"] == "auth_timeout") {
-      $("#uc_login_status").text("ERROR: Timed out while authenticating.")
+    if (e["event"] == "auth_fail") {
+      $("#uc_login_status").text(auth_msg[e['error']]);
       UCState = UCStates.LOGGING_IN;
     } else if (e["event"] == "login_cancel") {
       uc_set_logged_out();
       UCState = UCStates.LOGGED_OUT;
+    } else if (e["event"] == "auth_success") {
+      uc_set_logged_in();
+      UCState = UCStates.LOGGED_IN;
     }
     break;
 
