@@ -4,6 +4,7 @@ from djangorestframework.views import View
 from django.contrib.auth.models import User
 from djangorestframework.response import Response, ErrorResponse
 from djangorestframework import status, authentication
+from django.contrib.gis.geos import GEOSGeometry
 from models import *
 
 # Dump exceptions to the server log
@@ -155,3 +156,77 @@ class LayerView(AuthView):
         layer = self._get_layer_or_404(request, username, layername)
         # TODO: return a list of geonotes (or links to geonotes)
         return Response(status.HTTP_200_OK)
+
+    def post(self, request, username=None, layername=None):
+        layer = self._get_layer_or_404(request, username, layername)
+        n = ''
+        lat = None
+        lon = None
+        try:
+            n = self.DATA['note']
+        except KeyError:
+            pass
+        try:
+            lat = self.DATA['lat']
+            lon = self.DATA['lon']
+        except KeyError:
+            return Response(status.HTTP_400_BAD_REQUEST, "lat and lon are both required")
+
+        # Okay.  All the params are validated
+        gnote = GeoNote(layer=layer, note=n, point='POINT(' + lon + ' ' + lat + ')')
+        gnote.save()
+        headers = {}
+        headers['Location'] = request.build_absolute_uri(str(gnote.id))
+        return Response(status.HTTP_201_CREATED, None, headers)
+
+class GeoNoteView(AuthView):
+    """
+    A view that allows authenticated users to GET a GeoNote, PUT (update), and
+    DELETE a geonote.
+    """
+    def _get_gnote_or_404(self, request, username, layername, id):
+        u = self._check_perm(request, username)
+        try:
+            gnote = GeoNote.objects.get(id=id)
+            return gnote
+        except GeoNote.DoesNotExist:
+            raise ErrorResponse(status.HTTP_404_NOT_FOUND, None, {})
+
+    def delete(self, request, username=None, layername=None, id=None):
+        gnote = self._get_gnote_or_404(request, username, layername, id)
+        gnote.delete()
+        return
+
+    def get(self, request, username=None, layername=None, id=None):
+        gnote = self._get_gnote_or_404(request, username, layername, id)
+        return Response(status.HTTP_200_OK, {'point':gnote.point.json,
+                                             'note':gnote.note})
+
+    def put(self, request, username=None, layername=None, id=None):
+        gnote = self._get_gnote_or_404(request, username, layername, id)
+        n = ''
+        lat = None
+        lon = None
+        try:
+            if self.DATA == None:
+                raise KeyError
+            n = self.DATA['note']
+            gnote.note = n
+        except KeyError:
+            pass
+        try:
+            if self.DATA == None:
+                raise KeyError
+            lat = self.DATA['lat']
+            gnote.point.y = float(lat)
+        except KeyError:
+            pass
+        try:
+            if self.DATA == None:
+                raise KeyError
+            lon = self.DATA['lon']
+            gnote.point.y = float(lon)
+        except KeyError:
+            pass
+        gnote.save()
+        return

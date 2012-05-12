@@ -9,6 +9,7 @@ urlpatterns = patterns('',
     url(r'^users[/]*$', UsersView.as_view()),
     url(r'^users/(?P<username>[^/]+)[/]*$', UserView.as_view(), name='user'),
     url(r'^users/(?P<username>[^/]+)/(?P<layername>[^/]+)[/]*$', LayerView.as_view(), name='layer'),
+    url(r'^users/(?P<username>[^/]+)/(?P<layername>[^/]+)/(?P<id>\d+)[/]*$', GeoNoteView.as_view(), name='gnote'),
 
     # Examples:
     # url(r'^$', 'GeoNotes.views.home', name='home'),
