@@ -4,10 +4,36 @@ from djangorestframework.views import View
 from django.contrib.auth.models import User
 from djangorestframework.response import Response, ErrorResponse
 from djangorestframework import status, authentication
+from models import *
+
+# Dump exceptions to the server log
+from django.core.signals import got_request_exception
+import logging
+def log_exception(*args, **kwds):
+    logging.exception('Exception in request:')
+got_request_exception.connect(log_exception)
 
 def index(request):
     return render_to_response('GeoNotes/index.html',
                               context_instance=RequestContext(request))
+
+class AuthView(View):
+    """
+    a View for model instances only accessible to the user that owns them
+    """
+    def _check_perm(self, request, username):
+        # get a user profile.  Here we enforce a bit of permission by only
+        # allowing users to operate on their own profiles.  There is probably a
+        # better way to do this by embracing the contrib.auth and/or
+        # djangorestframework permission systems.  Note that we return 403
+        # instead of 404 if the user doesn't exist.  This is common practice to
+        # prevent malicious users from knowing whether or not a particular
+        # username exists.
+        auth = authentication.BasicAuthentication(self)
+        u = auth.authenticate(request)
+        if u == None or u.username != username:
+            raise ErrorResponse(status.HTTP_403_FORBIDDEN, None, {})
+        return u
 
 class UsersView(View):
     """
@@ -33,32 +59,28 @@ class UsersView(View):
         user = User.objects.create_user(username, "", password)
         return Response(status.HTTP_201_CREATED)
 
-class UserView(View):
+class UserView(AuthView):
     """
-    A view that allows authenticated users to GET or DELETE their profile.
+    A view that allows authenticated users to GET or DELETE their profile, and
+    POST new layers.
     """
-
-    def _check_perm(self, request, username):
-        # get a user profile.  Here we enforce a bit of permission by only
-        # allowing users to operate on their own profiles.  There is probably a
-        # better way to do this by embracing the contrib.auth and/or
-        # djangorestframework permission systems.  Note that we return 403
-        # instead of 404 if the user doesn't exist.  This is common practice to
-        # prevent malicious users from knowing whether or not a particular
-        # username exists.
-        auth = authentication.BasicAuthentication(self)
-        u = auth.authenticate(request)
-        if u == None or u.username != username:
-            raise ErrorResponse(status.HTTP_403_FORBIDDEN, None, {})
-        return u
 
     def get(self, request, username=None):
         """
-        GETting geonotes/users/foo/ just verifies that the credentials are
-        valid.  No state is stored on the server side.
+        GETting geonotes/users/foo/ returns a list of foo's layers
         """
         u = self._check_perm(request, username)
-        return Response(status.HTTP_200_OK)
+        try:
+            layers = Layer.objects.filter(owner=u)
+        except Layer.DoesNotExist:
+            return;
+        layers = map(lambda l: {"name": l.name,
+                                "uri": request.build_absolute_uri(u.username + "/" + l.name),
+                                },
+                     layers)
+        if layers == []:
+            return
+        return Response(status.HTTP_200_OK, layers)
 
     def delete(self, request, username=None):
         """
@@ -83,3 +105,53 @@ class UserView(View):
             return Response(status.HTTP_400_BAD_REQUEST,
                             "password is required")
         return
+
+    def post(self, request, username=None):
+        """
+        POSTing to a user's URL creates a new layer to contain geonotes.
+        """
+        u = self._check_perm(request, username)
+        msg = "layer name is required"
+        try:
+            l = self.DATA['layer']
+            if l == "":
+                raise KeyError
+            layer = Layer.objects.get(owner=u, name=l)
+            if layer != None:
+                return Response(status.HTTP_409_CONFLICT,
+                                "a layer with that name already exists.")
+        except Layer.DoesNotExist:
+            pass
+        except KeyError:
+            return Response(status.HTTP_400_BAD_REQUEST, msg)
+
+        # Okay.  The layer doesn't exist.  We're good to go.
+        layer = Layer(owner=u, name=l)
+        layer.save()
+        headers = {}
+        headers['Location'] = request.build_absolute_uri(layer.name)
+        return Response(status.HTTP_201_CREATED, None, headers)
+
+class LayerView(AuthView):
+    """
+    A view that allows authenticated users to POST new GeoNotes to a layer, GET
+    a layer with links to all of its GeoNotes, and DELETE a layer.
+    """
+
+    def _get_layer_or_404(self, request, username=None, layername=None):
+        u = self._check_perm(request, username)
+        try:
+            layer = Layer.objects.get(owner=u, name=layername)
+        except Layer.DoesNotExist:
+            raise ErrorResponse(status.HTTP_404_NOT_FOUND, None, {})
+        return layer
+
+    def delete(self, request, username=None, layername=None):
+        layer = self._get_layer_or_404(request, username, layername)
+        layer.delete()
+        return
+
+    def get(self, request, username=None, layername=None):
+        layer = self._get_layer_or_404(request, username, layername)
+        # TODO: return a list of geonotes (or links to geonotes)
+        return Response(status.HTTP_200_OK)

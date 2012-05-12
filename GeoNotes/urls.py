@@ -8,6 +8,7 @@ from views import *
 urlpatterns = patterns('',
     url(r'^users[/]*$', UsersView.as_view()),
     url(r'^users/(?P<username>[^/]+)[/]*$', UserView.as_view(), name='user'),
+    url(r'^users/(?P<username>[^/]+)/(?P<layername>[^/]+)[/]*$', LayerView.as_view(), name='layer'),
 
     # Examples:
     # url(r'^$', 'GeoNotes.views.home', name='home'),
