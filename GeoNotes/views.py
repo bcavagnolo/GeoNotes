@@ -154,8 +154,12 @@ class LayerView(AuthView):
 
     def get(self, request, username=None, layername=None):
         layer = self._get_layer_or_404(request, username, layername)
-        # TODO: return a list of geonotes (or links to geonotes)
-        return Response(status.HTTP_200_OK)
+        gnotes = GeoNote.objects.filter(layer=layer)
+        gnotes = map(lambda g: {"uri": request.build_absolute_uri(str(g.id))},
+                     gnotes)
+        if gnotes == []:
+            return
+        return Response(status.HTTP_200_OK, gnotes)
 
     def post(self, request, username=None, layername=None):
         layer = self._get_layer_or_404(request, username, layername)
