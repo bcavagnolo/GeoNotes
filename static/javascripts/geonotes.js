@@ -28,9 +28,12 @@ gnote_new_template = "<div id=\"uc_geonote\">" +
 // A GeoNote is just a decorated vector feature
 GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
 
-  initialize: function(lonlat) {
+  initialize: function(lonlat, note) {
     this.lat = lonlat.lat;
     this.lon = lonlat.lon;
+    this.template = gnote_new_template;
+    if (note != undefined)
+      this.note = note;
     OpenLayers.Feature.Vector.prototype.initialize.apply(
       this,
       [new OpenLayers.Geometry.Point(this.lon, this.lat), null, null]
@@ -46,18 +49,24 @@ GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
       null, true, this.onPopupClose);
     map.addPopup(this.popup);
     this.popup.data = this;
+    gnote = this;
     $("a").filter(".ucgn").each(function(index) {
       $(this).click(function() {
-        uc({"event":$(this).attr('id')});
+        uc({"event":$(this).attr('id')}, gnote);
       });
     });
+    if (this.note != undefined) {
+      $("textarea.#geonote_new").text(this.note);
+    }
   },
 
   onPopupClose: function (e) {
-    uc({"event":"geonote_cancel"});
+    uc({"event":"geonote_cancel"}, this.data);
   },
 
   unClickHandler: function (e) {
+    if (this.popup == null)
+      return;
     map.removePopup(this.popup);
     this.popup.destroy();
     this.popup = null;
@@ -103,6 +112,9 @@ UCStates = {
   CREATING_GNOTE:6,
   STORING_GNOTE:7,
   CREATING_LAYER:8,
+  LOADING_LAYER:9,
+  LOADING_GEONOTES:10,
+  CANCELLING_GEONOTE:11,
 }
 
 UCState = UCStates.LOGGED_OUT;
@@ -110,7 +122,8 @@ var req = null;
 var username = null;
 var password = null;
 var auth = null;
-var gnote = null;
+var numGeoNotes;
+var gnReqs = [];
 
 var auth_msg = {
   FORBIDDEN:"Error: incorrect credentials",
@@ -143,9 +156,9 @@ function uc_set_logged_out() {
   if (req) req.abort();
 }
 
-function uc(e) {
+function uc(e, gnote) {
   console.log("User Controller State: " + UCState)
-  console.log("User Controller Event: " + JSON.stringify(e))
+  console.log("User Controller Event: " + JSON.stringify(e));
 
   switch (UCState) {
   case UCStates.LOGGED_OUT:
@@ -185,7 +198,7 @@ function uc(e) {
         beforeSend: function (xhr) {
           xhr.setRequestHeader("Authorization", auth);
         },
-        success: function() {uc({event: "auth_success"});},
+        success: function(data) {uc({event: "auth_success", data: data});},
         error: function(xhr, status, error) {
           uc({event: "auth_fail", error: error});
         }
@@ -205,6 +218,83 @@ function uc(e) {
       uc_set_logged_out();
       UCState = UCStates.LOGGED_OUT;
     } else if (e["event"] == "auth_success") {
+      // TODO: Here we assume a well behaved server.  Is that okay?
+      for (var i=0; i<e['data'].length; i++) {
+        if (e['data'][i].name == "geonotes") {
+          $("#uc_login_status").text("Loading Layer...");
+          req = $.ajax({
+            url: e['data'][i].uri,
+            type: 'GET',
+            beforeSend: function (xhr) {
+              xhr.setRequestHeader("Authorization", auth);
+            },
+            success: function(data) {uc({event: "load_success", data: data});},
+            error: function(xhr, status, error) {
+              uc({event: "load_fail", error: error});
+            }
+          });
+          UCState = UCStates.LOADING_LAYER;
+          return;
+        }
+      }
+      $("#uc_login_status").text("ERROR: No  geonotes layer.");
+      UCState = UCStates.LOGGING_IN;
+    }
+    break;
+
+  case UCStates.LOADING_LAYER:
+    if (e["event"] == "load_fail") {
+      $("#uc_login_status").text(auth_msg[e['error']]);
+      UCState = UCStates.LOGGING_IN;
+    } else if (e["event"] == "login_cancel") {
+      uc_set_logged_out();
+      UCState = UCStates.LOGGED_OUT;
+    } else if (e["event"] == "load_success") {
+      if (e['data'] == "" && e['data'].length == 0) {
+        uc_set_logged_in();
+        UCState = UCStates.LOGGED_IN;
+        break;
+      }
+      $("#uc_login_status").text("Loading GeoNotes...");
+      numGeoNotes = e['data'].length;
+      UCState = UCStates.LOADING_GEONOTES;
+      for (var i=0; i<numGeoNotes; i++) {
+        console.log("Loading " + e['data'][i]);
+        gnReqs.push($.ajax({
+          url: e['data'][i].uri,
+          type: 'GET',
+          beforeSend: function (xhr) {
+            xhr.setRequestHeader("Authorization", auth);
+          },
+          success: function(data) {uc({event: "geonote_success", data: data});},
+          error: function(xhr, status, error) {
+            uc({event: "geonote_fail", error: error});
+          }
+        }));
+      }
+    }
+    break;
+
+  case UCStates.LOADING_GEONOTES:
+    if (e["event"] == "login_cancel") {
+      uc_set_logged_out();
+      UCState = UCStates.LOGGED_OUT;
+      for (var i=0; i<gnReqs.length; i++)
+        gnReqs[i].abort();
+      gnReqs = [];
+      numGeoNotes = 0;
+      break;
+    }
+
+    if (e["event"] == "geonote_fail") {
+      console.log("WARNING: Failed to load a GeoNote")
+    } else if (e["event"] == "geonote_success") {
+      p = formatter.read(JSON.parse(e["data"]["point"]), "Geometry");
+      gnote = new GeoNote(new OpenLayers.LonLat(p.x, p.y), e["data"]["note"]);
+      notes.addFeatures(gnote);
+    }
+    numGeoNotes--;
+    if (numGeoNotes == 0) {
       uc_set_logged_in();
       UCState = UCStates.LOGGED_IN;
     }
@@ -298,6 +388,9 @@ function uc(e) {
       //fake a click so geonote dialog appears
       gnote.clickHandler();
       UCState = UCStates.CREATING_GNOTE;
+    } else if (e["event"] == "geonote_cancel") {
+      selectControl.unselect(gnote);
+      UCState = UCStates.CANCELLING_GEONOTE;
     }
     break;
 
@@ -308,8 +401,29 @@ function uc(e) {
       UCState = UCStates.LOGGED_IN;
     } else if (e["event"] == "geonote_submit") {
       $("#uc_geonote_status").text("Saving GeoNote...");
+      note = $("textarea#geonote_new").val();
+      req = $.ajax({
+        url: baseURL + '/users/' + username + '/geonotes/',
+        type: 'POST',
+        data: {note:note, lat:gnote.lat, lon:gnote.lon},
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("Authorization", auth);
+        },
+        success: function() {uc({event: "geonote_success"}, gnote);},
+        error: function(xhr, status, error) {
+          uc({event: "geonote_fail", error: error});
+        }
+      });
       UCState = UCStates.STORING_GNOTE;
     }
+    break;
+
+  case UCStates.CANCELLING_GEONOTE:
+    // Ugh.  I always get a spurious click event after closing the popup.  I've
+    // tried a billion things and I'm giving up.  So this dumb state is just a
+    // pass-through state so we can dump the unexpected geonote_new event that
+    // comes after cancelling.
+    UCState = UCStates.LOGGED_IN;
     break;
 
   case UCStates.STORING_GNOTE:
