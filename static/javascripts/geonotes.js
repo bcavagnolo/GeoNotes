@@ -22,15 +22,18 @@ gnote_new_template = "<div id=\"uc_geonote\">" +
   "<textarea id=\"geonote_new\" name=\"geonote_new\" rows=\"4\" cols=\"25\">Enter new GeoNote</textarea>" +
   "</div>" +
   "<a id=\"geonote_submit\" href=\"#\" class=\"ucgn\">Submit</a>" +
+  "<a id=\"geonote_update\" href=\"#\" class=\"ucgn\" style=\"display: none\">Update</a>" +
+  "<a id=\"geonote_delete\" href=\"#\" class=\"ucgn\" style=\"display: none\">Delete</a>" +
   "</form>" +
   "</div>"
 
 // A GeoNote is just a decorated vector feature
 GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
 
-  initialize: function(lonlat, note) {
+  initialize: function(lonlat, note, uri) {
     this.lat = lonlat.lat;
     this.lon = lonlat.lon;
+    this.uri = uri;
     this.template = gnote_new_template;
     if (note != undefined)
       this.note = note;
@@ -57,6 +60,9 @@ GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
     });
     if (this.note != undefined) {
       $("textarea.#geonote_new").text(this.note);
+      $('#geonote_submit').hide();
+      $('#geonote_update').show();
+      $('#geonote_delete').show();
     }
   },
 
@@ -115,6 +121,7 @@ UCStates = {
   LOADING_LAYER:9,
   LOADING_GEONOTES:10,
   CANCELLING_GEONOTE:11,
+  DELETING_GEONOTE:12,
 }
 
 UCState = UCStates.LOGGED_OUT;
@@ -259,14 +266,15 @@ function uc(e, gnote) {
       numGeoNotes = e['data'].length;
       UCState = UCStates.LOADING_GEONOTES;
       for (var i=0; i<numGeoNotes; i++) {
-        console.log("Loading " + e['data'][i]);
+        console.log("Loading " + JSON.stringify(e['data'][i]));
         gnReqs.push($.ajax({
           url: e['data'][i].uri,
           type: 'GET',
           beforeSend: function (xhr) {
             xhr.setRequestHeader("Authorization", auth);
           },
-          success: function(data) {uc({event: "geonote_success", data: data});},
+          success: function(data) {
+            uc({event: "geonote_success", data: data});},
           error: function(xhr, status, error) {
             uc({event: "geonote_fail", error: error});
           }
@@ -290,7 +298,7 @@ function uc(e, gnote) {
       console.log("WARNING: Failed to load a GeoNote")
     } else if (e["event"] == "geonote_success") {
       p = formatter.read(JSON.parse(e["data"]["point"]), "Geometry");
-      gnote = new GeoNote(new OpenLayers.LonLat(p.x, p.y), e["data"]["note"]);
+      gnote = new GeoNote(new OpenLayers.LonLat(p.x, p.y), e["data"]["note"], e["data"]["uri"]);
       notes.addFeatures(gnote);
     }
     numGeoNotes--;
@@ -391,6 +399,39 @@ function uc(e, gnote) {
     } else if (e["event"] == "geonote_cancel") {
       selectControl.unselect(gnote);
       UCState = UCStates.CANCELLING_GEONOTE;
+    } else if (e["event"] == "geonote_update") {
+      $("#uc_geonote_status").text("Updating GeoNote...");
+      note = $("textarea#geonote_new").val();
+      req = $.ajax({
+        url: gnote.uri,
+        type: 'PUT',
+        data: {note:note, lat:gnote.lat, lon:gnote.lon},
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("Authorization", auth);
+        },
+        success: function() {uc({event: "geonote_success"}, gnote);},
+        error: function(xhr, status, error) {
+          uc({event: "geonote_fail", error: error});
+        }
+      });
+      gnote.note = note;
+      UCState = UCStates.STORING_GNOTE;
+    } else if (e["event"] == "geonote_delete") {
+      $("#uc_geonote_status").text("Deleting GeoNote...");
+      note = $("textarea#geonote_new").val();
+      req = $.ajax({
+        url: gnote.uri,
+        type: 'DELETE',
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("Authorization", auth);
+        },
+        success: function() {uc({event: "geonote_deleted"}, gnote);},
+        error: function(xhr, status, error) {
+          uc({event: "geonote_fail", error: error});
+        }
+      });
+      gnote.note = note;
+      UCState = UCStates.DELETING_GEONOTE;
     }
     break;
 
@@ -402,6 +443,7 @@ function uc(e, gnote) {
     } else if (e["event"] == "geonote_submit") {
       $("#uc_geonote_status").text("Saving GeoNote...");
       note = $("textarea#geonote_new").val();
+      gnote.note = note;
       req = $.ajax({
         url: baseURL + '/users/' + username + '/geonotes/',
         type: 'POST',
@@ -436,6 +478,20 @@ function uc(e, gnote) {
       UCState = UCStates.LOGGED_IN;
     } else if (e["event"] == "geonote_success") {
       selectControl.unselect(gnote);
+      UCState = UCStates.LOGGED_IN;
+    }
+    break;
+
+  case UCStates.DELETING_GEONOTE:
+    if (e["event"] == "geonote_fail") {
+      $("#uc_geonote_status").text("Failed to delete GeoNote");
+      UCState = UCStates.LOGGED_IN;
+    } else if (e["event"] == "geonote_cancel") {
+      selectControl.unselect(gnote);
+      UCState = UCStates.LOGGED_IN;
+    } else if (e["event"] == "geonote_deleted") {
+      selectControl.unselect(gnote);
+      notes.removeFeatures(gnote);
       UCState = UCStates.LOGGED_IN;
     }
     break;

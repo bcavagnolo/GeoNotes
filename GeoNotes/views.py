@@ -204,7 +204,9 @@ class GeoNoteView(AuthView):
     def get(self, request, username=None, layername=None, id=None):
         gnote = self._get_gnote_or_404(request, username, layername, id)
         return Response(status.HTTP_200_OK, {'point':gnote.point.json,
-                                             'note':gnote.note})
+                                             'note':gnote.note,
+                                             'uri':request.build_absolute_uri(),
+                                             })
 
     def put(self, request, username=None, layername=None, id=None):
         gnote = self._get_gnote_or_404(request, username, layername, id)
