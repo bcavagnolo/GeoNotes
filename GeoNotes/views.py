@@ -76,7 +76,7 @@ class UserView(AuthView):
         except Layer.DoesNotExist:
             return;
         layers = map(lambda l: {"name": l.name,
-                                "uri": request.build_absolute_uri(u.username + "/" + l.name),
+                                "uri": request.build_absolute_uri(l.name) + "/",
                                 },
                      layers)
         if layers == []:
