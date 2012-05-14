@@ -433,6 +433,20 @@ function uc(e, gnote) {
       });
       gnote.note = note;
       UCState = UCStates.DELETING_GEONOTE;
+    } else if (e["event"] == "refresh") {
+      notes.removeAllFeatures();
+      req = $.ajax({
+        url: baseURL + '/users/' + username + '/',
+        type: 'GET',
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("Authorization", auth);
+        },
+        success: function(data) {uc({event: "auth_success", data: data});},
+        error: function(xhr, status, error) {
+          uc({event: "auth_fail", error: error});
+        }
+      });
+      UCState = UCStates.AUTHENTICATING;
     }
     break;
 
