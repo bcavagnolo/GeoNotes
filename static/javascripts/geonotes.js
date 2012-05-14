@@ -260,6 +260,7 @@ $(document).ready(function() {
   });
 
   var osm = new OpenLayers.Layer.OSM();
+  osm.displayInLayerSwitcher = false;
   map.addLayers([osm]);
 
   map.addControl(new OpenLayers.Control.LayerSwitcher());
