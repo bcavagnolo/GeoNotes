@@ -102,11 +102,11 @@ UCStates = {
   REGISTERING:5,
   CREATING_GNOTE:6,
   STORING_GNOTE:7,
+  CREATING_LAYER:8,
 }
 
 UCState = UCStates.LOGGED_OUT;
-var authReq = null;
-var regReq = null;
+var req = null;
 var username = null;
 var password = null;
 var auth = null;
@@ -119,6 +119,7 @@ var auth_msg = {
 
 var reg_msg = {
   "BAD REQUEST":"That username appears to be unavailable.",
+  "FORBIDDEN":"Failed to create default layer.  Try again.",
   "":"Error: Failed to contact server",
 };
 
@@ -129,8 +130,7 @@ function uc_set_logged_in() {
   $("#uc_login_status").text("");
   $('#uc_registration').hide();
   $("#uc_reg_status").text("");
-  if (authReq) authReq.abort();
-  if (regReq) regReq.abort();
+  if (req) req.abort();
 }
 
 function uc_set_logged_out() {
@@ -140,8 +140,7 @@ function uc_set_logged_out() {
   $("#uc_login_status").text("")
   $("#uc_reg_status").text("");
   $('#uc_registration').hide();
-  if (authReq) authReq.abort();
-  if (regReq) regReq.abort();
+  if (req) req.abort();
 }
 
 function uc(e) {
@@ -180,7 +179,7 @@ function uc(e) {
         return;
       }
       $("#uc_login_status").text("Authenticating...");
-      authReq = $.ajax({
+      req = $.ajax({
         url: baseURL + '/users/' + username + '/',
         type: 'GET',
         beforeSend: function (xhr) {
@@ -228,7 +227,7 @@ function uc(e) {
       }
       password = password1;
       $("#uc_reg_status").text("Registering...");
-      regReq = $.ajax({
+      req = $.ajax({
         url: baseURL + '/users/',
         type: 'POST',
         data: {username: username, password: password},
@@ -253,6 +252,37 @@ function uc(e) {
       uc_set_logged_out();
       UCState = UCStates.LOGGED_OUT;
     } else if (e["event"] == "reg_success") {
+      // TODO: This is terrible.  When a user registers, we create a layer
+      // called "geonotes" which is the sole layer that we use in this client.
+      // The right way to do this is to invent some additional UI (drop-down
+      // menu at geonote creation time?).  Without this, we do a bunch of stuff
+      // behind the users back.  And we aren't very good about backing out if
+      // registration succeeds but layer creation fails.
+      auth = "Basic " + $.base64.encode(username + ":" + password);
+      req = $.ajax({
+        url: baseURL + '/users/' + username + '/',
+        type: 'POST',
+        data: {layer: "geonotes"},
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("Authorization", auth);
+        },
+        success: function() {uc({event: "layer_success"});},
+        error: function(xhr, status, error) {
+          uc({event: "layer_fail", error: error});
+        }
+      });
+      UCState = UCStates.CREATING_LAYER;
+    }
+    break;
+
+  case UCStates.CREATING_LAYER:
+    if (e["event"] == "layer_fail") {
+      $("#uc_reg_status").text(reg_msg[e['error']]);
+      UCState = UCStates.REGISTRATION_INPUT;
+    } else if (e["event"] == "reg_cancel") {
+      uc_set_logged_out();
+      UCState = UCStates.LOGGED_OUT;
+    } else if (e["event"] == "layer_success") {
       uc_set_logged_in();
       UCState = UCStates.LOGGED_IN;
     }
