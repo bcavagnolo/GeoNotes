@@ -12,6 +12,19 @@ var selectControl;
 var l = window.location;
 var baseURL = l.protocol + "//" + l.host + "/" + l.pathname.split('/')[1] + "geonotes";
 
+// This is the template for the geonote creation form.  I really want to put
+// this in the html and not here.  But it's not immediately obvious to me how
+// to do that.
+gnote_new_template = "<div id=\"uc_geonote\">" +
+  "<form id=\"uc_geonote_form\">" +
+  "<div><span id=\"uc_geonote_status\"/>&nbsp;</div>" +
+  "<div>" +
+  "<textarea id=\"geonote_new\" name=\"geonote_new\" rows=\"4\" cols=\"25\">Enter new GeoNote</textarea>" +
+  "</div>" +
+  "<a id=\"geonote_submit\" href=\"#\" class=\"ucgn\">Submit</a>" +
+  "</form>" +
+  "</div>"
+
 // A GeoNote is just a decorated vector feature
 GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
 
@@ -22,7 +35,6 @@ GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
       this,
       [new OpenLayers.Geometry.Point(this.lon, this.lat), null, null]
     );
-    notes.addFeatures(this);
   },
 
   clickHandler: function (e) {
@@ -30,14 +42,19 @@ GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
       this.id, 
       this.geometry.getBounds().getCenterLonLat(),
       null,
-      "<div style='font-size:.8em'>Feature: " + this.id +"<br>Area: " + this.geometry.getArea()+"</div>",
+      gnote_new_template,
       null, true, this.onPopupClose);
     map.addPopup(this.popup);
     this.popup.data = this;
+    $("a").filter(".ucgn").each(function(index) {
+      $(this).click(function() {
+        uc({"event":$(this).attr('id')});
+      });
+    });
   },
 
   onPopupClose: function (e) {
-    selectControl.unselect(this.data);
+    uc({"event":"geonote_cancel"});
   },
 
   unClickHandler: function (e) {
@@ -45,11 +62,6 @@ GeoNote = OpenLayers.Class(OpenLayers.Feature.Vector, {
     this.popup.destroy();
     this.popup = null;
   },
-
-  announce: function() {
-    point = new OpenLayers.Geometry.Point(this.lon, this.lat);
-    gjson = formatter.write(point);
-  }
 });
 
 OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
@@ -70,15 +82,13 @@ OpenLayers.Control.Click = OpenLayers.Class(OpenLayers.Control, {
     ); 
     this.handler = new OpenLayers.Handler.Click(
       this, {
-        'click': this.trigger
+        'click': function (e) {
+          var lonlat = map.getLonLatFromViewPortPx(e.xy);
+          uc({"event":"geonote_new", "lonlat":lonlat});
+        }
       }, this.handlerOptions
     );
   },
-
-  trigger: function(e) {
-    var lonlat = map.getLonLatFromViewPortPx(e.xy);
-    (new GeoNote(lonlat)).announce();
-  }
 });
 
 // This is the user controller state machine.  It should all be wrapped up in a
@@ -90,6 +100,8 @@ UCStates = {
   AUTHENTICATING:3,
   REGISTRATION_INPUT:4,
   REGISTERING:5,
+  CREATING_GNOTE:6,
+  STORING_GNOTE:7,
 }
 
 UCState = UCStates.LOGGED_OUT;
@@ -98,6 +110,7 @@ var regReq = null;
 var username = null;
 var password = null;
 var auth = null;
+var gnote = null;
 
 var auth_msg = {
   FORBIDDEN:"Error: incorrect credentials",
@@ -141,10 +154,16 @@ function uc(e) {
       console.log("user controller initialized");
     } else if (e["event"] == "login") {
       $('#uc_login').show();
+      $('#username').focus();
       UCState = UCStates.LOGGING_IN;
     } else if (e["event"] == "register") {
       $('#uc_registration').show();
       UCState = UCStates.REGISTRATION_INPUT;
+    } else if (e["event"] == "geonote_new") {
+      $('#uc_login').show();
+      $('#username').focus();
+      UCState = UCStates.LOGGING_IN;
+      $('#uc_login_status').text("Please login to create GeoNotes");
     }
     break;
 
@@ -243,10 +262,42 @@ function uc(e) {
     if (e["event"] == "logout") {
       uc_set_logged_out();
       UCState = UCStates.LOGGED_OUT;
+    } else if (e["event"] == "geonote_new") {
+      gnote = new GeoNote(e["lonlat"]);
+      notes.addFeatures(gnote);
+      //fake a click so geonote dialog appears
+      gnote.clickHandler();
+      UCState = UCStates.CREATING_GNOTE;
     }
     break;
+
+  case UCStates.CREATING_GNOTE:
+    if (e["event"] == "geonote_cancel") {
+      selectControl.unselect(gnote);
+      notes.removeFeatures(gnote);
+      UCState = UCStates.LOGGED_IN;
+    } else if (e["event"] == "geonote_submit") {
+      $("#uc_geonote_status").text("Saving GeoNote...");
+      UCState = UCStates.STORING_GNOTE;
+    }
+    break;
+
+  case UCStates.STORING_GNOTE:
+    if (e["event"] == "geonote_fail") {
+      $("#uc_geonote_status").text(reg_msg[e['error']]);
+      UCState = UCStates.CREATING_GNOTE;
+    } else if (e["event"] == "geonote_cancel") {
+      selectControl.unselect(gnote);
+      notes.removeFeatures(gnote);
+      UCState = UCStates.LOGGED_IN;
+    } else if (e["event"] == "geonote_success") {
+      selectControl.unselect(gnote);
+      UCState = UCStates.LOGGED_IN;
+    }
+    break;
+
   default:
-    console.log("ERROR: Unexpected user controller state: " + uc_state)
+    console.log("ERROR: Unexpected user controller state: " + UCState)
   }
 }
 
