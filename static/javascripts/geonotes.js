@@ -161,6 +161,7 @@ function uc_set_logged_out() {
   $("#uc_reg_status").text("");
   $('#uc_registration').hide();
   if (req) req.abort();
+  notes.removeAllFeatures();
 }
 
 function uc(e, gnote) {
