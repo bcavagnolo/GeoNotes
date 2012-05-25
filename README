@@ -49,6 +49,9 @@ Ubuntu
    [ This last step may fail if you already have created the postgis template ]
    $ createuser -P -D -S -R geonotes
    $ createdb -T template_postgis -O geonotes geonotes
+   $ psql geonotes
+     geonotes=# GRANT ALL ON TABLE spatial_ref_sys TO geonotes;
+     geonotes=# GRANT ALL ON TABLE geometry_columns TO geonotes;
    $ exit
 
 3. Configure GeoNotes:
